@@ -1,0 +1,21 @@
+language: go
+
+go:
+  - 1.8.3
+
+install:
+  - go get github.com/mitchellh/gox
+
+script:
+  - gox -os="darwin linux" -arch="amd64"
+
+deploy:
+  provider: releases
+  api_key:
+    secure: MEWDm6Gzfs4LLgvI3g3TKt6n+jSxNx32jDZV6ZtjBAv4GFo3Pv+OoynD0rLoojiO83nkv/s8FECinYXDpNVHS+sTvAogQs3vtr+WKnMqp0P5uZe7PWLQ771Wdb16pJtwxUZvbN0LSCATjW0rqIX4hg9rV0sNxezHKb6mhAFHP6pb5ZB0yB3oglBz/nQcszTho3at9xRG9Eb4V1OIBzBUIzruB4Wb8vg+ae/J+s/b3DgXBXZJJ+n7Pn7L7e4PKOJ4xFe58rY4rBMaJjFKl1x5zoUFlqMrTe4qU10ZwhqrxBLlKXwAgcIJD5lnoNWfUIB5nqPHrXqOEiM3L2UgVOMnG9PF/82lJnqKLqceHnyD5hbTrtIWl8XXdGoiavuvSk45dDqR030kM23Szq5NZx0H/669sXjEN1EfOj89UJ7L0QeC9pgXvQCIwXtKCZ6F3kPBnhqdqGzvJ6JWiQI2wmTDJamtAvcodf480w2qOeYlwPU7wUSpFYzuQft6pZ6xyHoEy8YqGPLAlXnDY7NVtX3HvvpaAd83miy/teffRsLFfqiQXEZVa0FTF6rFD5Nxpi7XC/Jt41Rlm5oIFPTkPg6G75jiV7BmzWeoSu/f08Tjk+qRAtC7p8KuWJoCFJIQg7GTxDcQnbf2GonbxyefoivucF1draD+QhIKMA0siS6FK34=
+  file:
+    - "stdin-rotate_darwin_amd64"
+    - "stdin-rotate_linux_amd64"
+  skip_cleanup: true
+  on:
+    tags: true
