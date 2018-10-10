@@ -8,9 +8,11 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"log/syslog"
 	"os"
 	"os/signal"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -18,10 +20,14 @@ import (
 )
 
 var (
-	compressOld = flag.Bool("gzip", true, "Gzip old files")
-	outputFile  = flag.String("output", "./output.log", "Output file")
-	maxFiles    = flag.Int("max-files", 5, "Maximum files to preserve")
-	maxFileSize = flag.Int("max-size", 10*1024*1024, "Maximum file size")
+	compressOld    = flag.Bool("gzip", true, "Gzip old files")
+	outputFile     = flag.String("output", "./output.log", "Output file")
+	maxFiles       = flag.Int("max-files", 5, "Maximum files to preserve")
+	maxFileSize    = flag.Int("max-size", 10*1024*1024, "Maximum file size")
+	syslogTarget   = flag.String("syslog-target", "", "Syslog server:port to send --syslog-regexp matching lines")
+	syslogRegexp   = flag.String("syslog-regexp", "", "Regular expression to match lines against to send them to syslog server")
+	syslogPriority = flag.Int("syslog-priority", int(syslog.LOG_NOTICE|syslog.LOG_LOCAL2), "Syslog priority")
+	syslogTag      = flag.String("syslog-tag", "stdin-rotate", "Syslog tag")
 )
 
 func main() {
@@ -56,6 +62,8 @@ type Appender struct {
 	writer       *bufio.Writer
 	bytesWritten int
 	closed       bool
+	syslog       *syslog.Writer
+	regexp       *regexp.Regexp
 
 	wg           sync.WaitGroup
 	lastFileChan chan string
@@ -87,6 +95,20 @@ func (s *Appender) openFile() {
 		log.Fatalln("ERROR", err)
 	}
 	s.bytesWritten = int(st.Size())
+
+	if *syslogTarget != "" {
+		s.syslog, err = syslog.Dial("udp", *syslogTarget, syslog.Priority(*syslogPriority), *syslogTag)
+		if err != nil {
+			log.Fatalln("ERROR: cannot connect to syslog server:", err)
+		}
+
+		if *syslogRegexp != "" {
+			s.regexp, err = regexp.Compile(*syslogRegexp)
+			if err != nil {
+				log.Fatalln("ERROR: cannot compile syslog regexp:", err)
+			}
+		}
+	}
 }
 
 func (s *Appender) closeFile() {
@@ -173,6 +195,14 @@ func (s *Appender) Append(line string) {
 	if s.bytesWritten >= *maxFileSize {
 		s.rotateFile()
 	}
+
+	if s.syslog != nil {
+		byteline := []byte(line)
+		if s.regexp == nil || s.regexp.Match(byteline) {
+			s.syslog.Write(byteline)
+		}
+	}
+
 	n, _ := s.writer.WriteString(line)
 	s.writer.WriteByte('\n')
 
