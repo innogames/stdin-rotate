@@ -205,6 +205,7 @@ func (s *Appender) Append(line string) {
 
 	n, _ := s.writer.WriteString(line)
 	s.writer.WriteByte('\n')
+	s.writer.Flush()
 
 	s.bytesWritten += n + 1
 }
